@@ -1,7 +1,3 @@
-import { initializeApp } from "firebase/app";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "firebase/firestore";
-
 // Configuração do Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyATG5P2NvdecjCPO7gzFNGs6l7plDrxY04",
@@ -13,52 +9,54 @@ const firebaseConfig = {
   measurementId: "G-FZWQ9FYZG5"
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
-// Elementos do DOM
+// DOM
 const loginSection = document.getElementById('login-section');
 const chatSection = document.getElementById('chat-section');
 const messagesDiv = document.getElementById('messages');
 
-// Função de login
-window.login = async function () {
+// Login
+function login() {
   const email = document.getElementById('email').value;
   const password = document.getElementById('password').value;
 
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
-    console.log("Login realizado com sucesso.");
-  } catch (error) {
-    alert(error.message);
-  }
-};
+  auth.signInWithEmailAndPassword(email, password)
+    .then(() => {
+      console.log("Login realizado");
+    })
+    .catch(error => {
+      alert(error.message);
+    });
+}
 
-// Função de logout
-window.logout = async function () {
-  await signOut(auth);
+// Logout
+function logout() {
+  auth.signOut();
   messagesDiv.innerHTML = '';
-};
+}
 
-// Função para enviar mensagem
-window.sendMessage = async function () {
+// Enviar mensagem
+function sendMessage() {
   const input = document.getElementById('message-input');
   const text = input.value.trim();
   const user = auth.currentUser;
 
   if (text && user) {
-    await addDoc(collection(db, "messages"), {
-      text,
+    db.collection("messages").add({
+      text: text,
       sender: user.email,
-      timestamp: serverTimestamp()
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
     });
     input.value = '';
   }
-};
+}
 
-// Ouvir mudanças de autenticação
-onAuthStateChanged(auth, user => {
+// Escutar autenticação
+auth.onAuthStateChanged(user => {
   if (user) {
     loginSection.style.display = 'none';
     chatSection.style.display = 'block';
@@ -69,18 +67,18 @@ onAuthStateChanged(auth, user => {
   }
 });
 
-// Função para escutar mensagens em tempo real
+// Ouvir mensagens em tempo real
 function listenMessages() {
-  const q = query(collection(db, "messages"), orderBy("timestamp"));
-
-  onSnapshot(q, (snapshot) => {
-    messagesDiv.innerHTML = '';
-    snapshot.forEach(doc => {
-      const msg = doc.data();
-      const div = document.createElement("div");
-      div.textContent = `${msg.sender}: ${msg.text}`;
-      messagesDiv.appendChild(div);
+  db.collection("messages")
+    .orderBy("timestamp")
+    .onSnapshot(snapshot => {
+      messagesDiv.innerHTML = '';
+      snapshot.forEach(doc => {
+        const msg = doc.data();
+        const div = document.createElement("div");
+        div.textContent = `${msg.sender}: ${msg.text}`;
+        messagesDiv.appendChild(div);
+      });
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
     });
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  });
 }
