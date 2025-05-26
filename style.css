@@ -1,29 +1,67 @@
 body {
-  font-family: Arial, sans-serif;
-  background: #f0f0f0;
+  font-family: 'Segoe UI', sans-serif;
+  background: #e0f2ff;
+  margin: 0;
+  padding: 0;
 }
 
 .container {
-  width: 90%;
-  max-width: 600px;
-  margin: auto;
+  max-width: 900px;
+  margin: 50px auto;
+  background: #ffffff;
   padding: 20px;
-  background: white;
-  border-radius: 8px;
-  margin-top: 50px;
+  border-radius: 16px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
-#messages {
+h1 {
+  text-align: center;
+  color: #0077cc;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 15px;
+}
+
+input {
+  padding: 10px;
   border: 1px solid #ccc;
-  height: 200px;
-  overflow-y: scroll;
-  margin-bottom: 10px;
-  padding: 5px;
+  border-radius: 8px;
+  font-size: 16px;
 }
 
-#messages div {
-  padding: 5px;
-  border-bottom: 1px solid #eee;
+button {
+  padding: 10px;
+  font-size: 16px;
+  border: none;
+  border-radius: 8px;
+  background: #0077cc;
+  color: white;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+button.secondary {
+  background: #aaa;
+}
+
+button:hover {
+  background: #005fa3;
+}
+
+.user-list {
+  float: left;
+  width: 30%;
+  border-right: 1px solid #ccc;
+  padding-right: 10px;
+}
+
+.chat-box {
+  float: right;
+  width: 65%;
 }
 
 #usersList {
@@ -32,8 +70,47 @@ body {
 }
 
 #usersList li {
-  cursor: pointer;
-  padding: 5px;
-  border: 1px solid #ccc;
+  background: #f1f1f1;
   margin: 5px 0;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+#usersList li:hover {
+  background: #e0e0e0;
+}
+
+.messages-box {
+  border: 1px solid #ccc;
+  background: #fdfdfd;
+  height: 250px;
+  overflow-y: auto;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+}
+
+.messages-box div {
+  padding: 5px 10px;
+  margin-bottom: 5px;
+  border-radius: 6px;
+  background-color: #e6f3ff;
+}
+
+.input-area {
+  display: flex;
+  gap: 10px;
+}
+
+.input-area input {
+  flex: 1;
+}
+
+@media (max-width: 768px) {
+  .user-list, .chat-box {
+    float: none;
+    width: 100%;
+  }
 }
