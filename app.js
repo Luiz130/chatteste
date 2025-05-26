@@ -1,84 +1,107 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+
 // Configuração do Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyATG5P2NvdecjCPO7gzFNGs6l7plDrxY04",
   authDomain: "sdel-16c6a.firebaseapp.com",
   projectId: "sdel-16c6a",
-  storageBucket: "sdel-16c6a.firebasestorage.app",
+  storageBucket: "sdel-16c6a.appspot.com",
   messagingSenderId: "676676370586",
-  appId: "1:676676370586:web:444947d3dda78a80d9df23",
-  measurementId: "G-FZWQ9FYZG5"
+  appId: "1:676676370586:web:444947d3dda78a80d9df23"
 };
 
-// Inicializar Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
 
-// DOM
-const loginSection = document.getElementById('login-section');
-const chatSection = document.getElementById('chat-section');
-const messagesDiv = document.getElementById('messages');
+let currentUser = null;
+let activeUser = null;
 
 // Login
-function login() {
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
+document.getElementById("loginBtn").addEventListener("click", async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
 
-  auth.signInWithEmailAndPassword(email, password)
-    .then(() => {
-      console.log("Login realizado");
-    })
-    .catch(error => {
-      alert(error.message);
-    });
-}
-
-// Logout
-function logout() {
-  auth.signOut();
-  messagesDiv.innerHTML = '';
-}
-
-// Enviar mensagem
-function sendMessage() {
-  const input = document.getElementById('message-input');
-  const text = input.value.trim();
-  const user = auth.currentUser;
-
-  if (text && user) {
-    db.collection("messages").add({
-      text: text,
-      sender: user.email,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    input.value = '';
-  }
-}
-
-// Escutar autenticação
-auth.onAuthStateChanged(user => {
-  if (user) {
-    loginSection.style.display = 'none';
-    chatSection.style.display = 'block';
-    listenMessages();
-  } else {
-    loginSection.style.display = 'block';
-    chatSection.style.display = 'none';
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (e) {
+    alert("Erro no login: " + e.message);
   }
 });
 
-// Ouvir mensagens em tempo real
-function listenMessages() {
-  db.collection("messages")
-    .orderBy("timestamp")
-    .onSnapshot(snapshot => {
-      messagesDiv.innerHTML = '';
-      snapshot.forEach(doc => {
-        const msg = doc.data();
-        const div = document.createElement("div");
-        div.textContent = `${msg.sender}: ${msg.text}`;
-        messagesDiv.appendChild(div);
-      });
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+// Após login
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    currentUser = user;
+    document.getElementById("loginArea").style.display = "none";
+    document.getElementById("chatArea").style.display = "block";
+    loadUsers();
+  }
+});
+
+// Carregar usuários (exceto o atual)
+async function loadUsers() {
+  const usersList = document.getElementById("usersList");
+  usersList.innerHTML = "";
+
+  const usersQuery = collection(db, "users");
+
+  onSnapshot(usersQuery, (snapshot) => {
+    usersList.innerHTML = "";
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.uid !== currentUser.uid) {
+        const li = document.createElement("li");
+        li.textContent = data.email;
+        li.onclick = () => {
+          activeUser = data;
+          document.getElementById("activeUserName").textContent = data.email;
+          loadMessages();
+        };
+        usersList.appendChild(li);
+      }
     });
+  });
+}
+
+// Enviar mensagem
+document.getElementById("sendBtn").addEventListener("click", async () => {
+  const text = document.getElementById("messageInput").value;
+
+  if (text.trim() === "" || !activeUser) return;
+
+  await addDoc(collection(db, "messages"), {
+    from: currentUser.uid,
+    to: activeUser.uid,
+    text: text,
+    timestamp: serverTimestamp()
+  });
+
+  document.getElementById("messageInput").value = "";
+});
+
+// Carregar mensagens entre usuários
+function loadMessages() {
+  const q = query(collection(db, "messages"));
+  const messagesDiv = document.getElementById("messages");
+  messagesDiv.innerHTML = "";
+
+  onSnapshot(q, (snapshot) => {
+    messagesDiv.innerHTML = "";
+
+    snapshot.forEach(doc => {
+      const msg = doc.data();
+      const isBetween = 
+        (msg.from === currentUser.uid && msg.to === activeUser.uid) ||
+        (msg.from === activeUser.uid && msg.to === currentUser.uid);
+
+      if (isBetween) {
+        const div = document.createElement("div");
+        div.textContent = `${msg.from === currentUser.uid ? "Você" : activeUser.email}: ${msg.text}`;
+        messagesDiv.appendChild(div);
+      }
+    });
+  });
 }
