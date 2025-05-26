@@ -31,7 +31,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-app.js";
-  import { getFirestore, collection, doc, setDoc, getDocs, query, where, onSnapshot, addDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-firestore.js";
+  import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, onSnapshot, addDoc, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-firestore.js";
   import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-auth.js";
 
   const firebaseConfig = {
@@ -58,46 +58,50 @@
   const messageInput = document.getElementById('messageInput');
   const sendBtn = document.getElementById('sendBtn');
 
-  // Função para mostrar lista de usuários, exceto o usuário atual
   async function loadUsers() {
     usersDiv.innerHTML = 'Carregando usuários...';
-    const usersSnapshot = await getDocs(collection(db, "users"));
-    usersDiv.innerHTML = '';
-    usersSnapshot.forEach(docSnap => {
-      const userData = docSnap.data();
-      const uid = docSnap.id;
-      if (uid !== currentUser.uid) {
-        const userDiv = document.createElement('div');
-        userDiv.textContent = userData.name || "Usuário sem nome";
-        userDiv.classList.add('user');
-        userDiv.dataset.uid = uid;
-        userDiv.onclick = () => selectUser(uid, userData.name);
-        usersDiv.appendChild(userDiv);
+    try {
+      const usersSnapshot = await getDocs(collection(db, "users"));
+      usersDiv.innerHTML = '';
+      let foundOtherUsers = false;
+      usersSnapshot.forEach(docSnap => {
+        const userData = docSnap.data();
+        const uid = docSnap.id;
+        if (uid !== currentUser.uid) {
+          foundOtherUsers = true;
+          const userDiv = document.createElement('div');
+          userDiv.textContent = userData.name || "Usuário sem nome";
+          userDiv.classList.add('user');
+          userDiv.dataset.uid = uid;
+          userDiv.onclick = () => selectUser(uid, userData.name);
+          usersDiv.appendChild(userDiv);
+        }
+      });
+      if (!foundOtherUsers) {
+        usersDiv.innerHTML = 'Nenhum outro usuário encontrado.';
       }
-    });
+    } catch (err) {
+      usersDiv.innerHTML = 'Erro ao carregar usuários.';
+      console.error("Erro loadUsers:", err);
+    }
   }
 
-  // Seleciona usuário para conversar
   function selectUser(uid, name) {
     chatPartner = { uid, name };
     chatWithSpan.textContent = name;
 
-    // Marcar visualmente o usuário selecionado
     document.querySelectorAll('.user').forEach(el => el.classList.remove('selected'));
     const selectedEl = document.querySelector(`.user[data-uid="${uid}"]`);
     if (selectedEl) selectedEl.classList.add('selected');
 
-    // Desinscrever conversa anterior se existir
     if (unsubscribeMessages) unsubscribeMessages();
 
     loadMessages();
   }
 
-  // Carrega mensagens entre currentUser e chatPartner
   function loadMessages() {
     messagesDiv.innerHTML = 'Carregando mensagens...';
 
-    // A conversa tem um ID composto para garantir mesma conversa entre 2 usuários (ordem alfabética)
     const chatId = [currentUser.uid, chatPartner.uid].sort().join('_');
 
     const messagesRef = collection(db, "chats", chatId, "messages");
@@ -117,42 +121,50 @@
           div.textContent = chatPartner.name + ": " + msg.text;
         }
         messagesDiv.appendChild(div);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
       });
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }, (error) => {
+      console.error("Erro no onSnapshot das mensagens:", error);
+      messagesDiv.innerHTML = 'Erro ao carregar mensagens.';
     });
   }
 
-  // Envia mensagem para Firestore
   async function sendMessage() {
     const text = messageInput.value.trim();
-    if (!text || !chatPartner) return;
+    if (!text) return alert("Digite uma mensagem");
+    if (!chatPartner) return alert("Selecione um usuário para conversar");
 
     const chatId = [currentUser.uid, chatPartner.uid].sort().join('_');
     const messagesRef = collection(db, "chats", chatId, "messages");
 
-    await addDoc(messagesRef, {
-      text,
-      sender: currentUser.uid,
-      createdAt: new Date()
-    });
-
-    messageInput.value = '';
+    try {
+      await addDoc(messagesRef, {
+        text,
+        sender: currentUser.uid,
+        createdAt: serverTimestamp()
+      });
+      messageInput.value = '';
+    } catch (err) {
+      console.error("Erro ao enviar mensagem:", err);
+      alert("Erro ao enviar mensagem");
+    }
   }
 
   sendBtn.onclick = sendMessage;
   messageInput.onkeydown = (e) => { if (e.key === 'Enter') sendMessage(); };
 
-  // Autenticação anônima para exemplo (substituir pela sua autenticação real)
+  // Autenticação anônima para teste
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUser = user;
       console.log("Usuário autenticado:", user.uid);
 
-      // Criar documento do usuário no Firestore caso não exista (com nome simples)
+      // Verifica se usuário existe no Firestore e cria se não existir
       const userDocRef = doc(db, "users", user.uid);
-      const userDocSnap = await getDocs(userDocRef);
+      const userDocSnap = await getDoc(userDocRef);
       if (!userDocSnap.exists()) {
         await setDoc(userDocRef, { name: "Usuário " + user.uid.substring(0,5) });
+        console.log("Usuário criado no Firestore");
       }
 
       await loadUsers();
@@ -160,6 +172,7 @@
       await signInAnonymously(auth);
     }
   });
+
 </script>
 
 </body>
