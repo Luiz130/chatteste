@@ -1,15 +1,19 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, collection, addDoc, query, orderBy, onSnapshot, where
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-// Configuração do Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyATG5P2NvdecjCPO7gzFNGs6l7plDrxY04",
   authDomain: "sdel-16c6a.firebaseapp.com",
   projectId: "sdel-16c6a",
-  storageBucket: "sdel-16c6a.appspot.com",
+  storageBucket: "sdel-16c6a.firebasestorage.app",
   messagingSenderId: "676676370586",
-  appId: "1:676676370586:web:444947d3dda78a80d9df23"
+  appId: "1:676676370586:web:444947d3dda78a80d9df23",
+  measurementId: "G-FZWQ9FYZG5"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -17,91 +21,95 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 let currentUser = null;
-let activeUser = null;
+let selectedUser = null;
 
-// Login
-document.getElementById("loginBtn").addEventListener("click", async () => {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+const userList = document.getElementById("userList");
+const messagesDiv = document.getElementById("messages");
+const chatHeader = document.getElementById("chatHeader");
+const form = document.getElementById("messageForm");
+const input = document.getElementById("messageInput");
 
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
-  } catch (e) {
-    alert("Erro no login: " + e.message);
-  }
-});
-
-// Após login
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    currentUser = user;
-    document.getElementById("loginArea").style.display = "none";
-    document.getElementById("chatArea").style.display = "block";
-    loadUsers();
-  }
-});
-
-// Carregar usuários (exceto o atual)
-async function loadUsers() {
-  const usersList = document.getElementById("usersList");
-  usersList.innerHTML = "";
-
-  const usersQuery = collection(db, "users");
-
-  onSnapshot(usersQuery, (snapshot) => {
-    usersList.innerHTML = "";
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      if (data.uid !== currentUser.uid) {
-        const li = document.createElement("li");
-        li.textContent = data.email;
-        li.onclick = () => {
-          activeUser = data;
-          document.getElementById("activeUserName").textContent = data.email;
-          loadMessages();
-        };
-        usersList.appendChild(li);
-      }
-    });
+function renderUsers(users) {
+  userList.innerHTML = "";
+  users.forEach(user => {
+    if (user.uid !== currentUser.uid) {
+      const li = document.createElement("li");
+      li.textContent = user.name;
+      li.onclick = () => {
+        selectedUser = user;
+        chatHeader.textContent = `Conversando com ${user.name}`;
+        loadMessages();
+      };
+      userList.appendChild(li);
+    }
   });
 }
 
-// Enviar mensagem
-document.getElementById("sendBtn").addEventListener("click", async () => {
-  const text = document.getElementById("messageInput").value;
+function renderMessage(msg) {
+  const div = document.createElement("div");
+  div.classList.add("message");
+  if (msg.from === currentUser.uid) div.classList.add("sent");
+  div.textContent = msg.text;
+  messagesDiv.appendChild(div);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
 
-  if (text.trim() === "" || !activeUser) return;
-
-  await addDoc(collection(db, "messages"), {
-    from: currentUser.uid,
-    to: activeUser.uid,
-    text: text,
-    timestamp: serverTimestamp()
-  });
-
-  document.getElementById("messageInput").value = "";
-});
-
-// Carregar mensagens entre usuários
 function loadMessages() {
-  const q = query(collection(db, "messages"));
-  const messagesDiv = document.getElementById("messages");
   messagesDiv.innerHTML = "";
+  const q = query(
+    collection(db, "messages"),
+    where("chatId", "==", getChatId(currentUser.uid, selectedUser.uid)),
+    orderBy("timestamp")
+  );
 
   onSnapshot(q, (snapshot) => {
     messagesDiv.innerHTML = "";
-
-    snapshot.forEach(doc => {
-      const msg = doc.data();
-      const isBetween = 
-        (msg.from === currentUser.uid && msg.to === activeUser.uid) ||
-        (msg.from === activeUser.uid && msg.to === currentUser.uid);
-
-      if (isBetween) {
-        const div = document.createElement("div");
-        div.textContent = `${msg.from === currentUser.uid ? "Você" : activeUser.email}: ${msg.text}`;
-        messagesDiv.appendChild(div);
-      }
-    });
+    snapshot.forEach(doc => renderMessage(doc.data()));
   });
+}
+
+function getChatId(uid1, uid2) {
+  return [uid1, uid2].sort().join("_");
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!selectedUser) return alert("Selecione um usuário!");
+  await addDoc(collection(db, "messages"), {
+    chatId: getChatId(currentUser.uid, selectedUser.uid),
+    from: currentUser.uid,
+    to: selectedUser.uid,
+    text: input.value,
+    timestamp: Date.now()
+  });
+  input.value = "";
+});
+
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    currentUser = user;
+    const userSnap = await getDoc(doc(db, "users", user.uid));
+    if (!userSnap.exists()) {
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        name: user.displayName || "Sem Nome"
+      });
+    }
+    loadUserList();
+  } else {
+    const provider = new GoogleAuthProvider();
+    signInWithPopup(auth, provider);
+  }
+});
+
+import {
+  getDoc, doc, setDoc, getDocs
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+async function loadUserList() {
+  const q = query(collection(db, "users"));
+  const snapshot = await getDocs(q);
+  const users = [];
+  snapshot.forEach(doc => users.push(doc.data()));
+  renderUsers(users);
 }
