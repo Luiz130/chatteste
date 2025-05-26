@@ -1,37 +1,28 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>Chat Firebase Bonito</title>
-  <link rel="stylesheet" href="style.css">
-  <script type="module" src="app.js" defer></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chat Firebase</title>
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
   <div class="container">
-    <h1>💬 Chat com Firebase</h1>
-
-    <div id="loginArea" class="card">
-      <input type="email" id="email" placeholder="Email">
-      <input type="password" id="password" placeholder="Senha">
-      <button id="loginBtn">Entrar</button>
-      <button id="registerBtn" class="secondary">Criar Conta</button>
-    </div>
-
-    <div id="chatArea" class="card" style="display:none;">
-      <div class="user-list">
-        <h2>Usuários</h2>
-        <ul id="usersList"></ul>
-      </div>
-
-      <div class="chat-box">
-        <h2>Conversando com: <span id="activeUserName">Ninguém</span></h2>
-        <div id="messages" class="messages-box"></div>
-        <div class="input-area">
-          <input type="text" id="messageInput" placeholder="Digite sua mensagem...">
-          <button id="sendBtn">Enviar</button>
-        </div>
-      </div>
-    </div>
+    <aside class="sidebar">
+      <h2>Usuários</h2>
+      <ul id="userList"></ul>
+    </aside>
+    <main class="chat">
+      <div id="chatHeader">Selecione um usuário</div>
+      <div id="messages" class="messages"></div>
+      <form id="messageForm">
+        <input type="text" id="messageInput" placeholder="Digite uma mensagem..." required/>
+        <button type="submit">Enviar</button>
+      </form>
+    </main>
   </div>
+
+  <!-- Firebase -->
+  <script type="module" src="script.js"></script>
 </body>
 </html>
