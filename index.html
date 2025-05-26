@@ -1,248 +1,137 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>Chat da Clínica Médica</title>
+  <title>Chat Firebase</title>
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f0f2f5;
-      padding: 20px;
-    }
-
-    h1 {
-      text-align: center;
-    }
-
-    #login-section,
-    #chat-section {
-      max-width: 600px;
-      margin: auto;
-      background: white;
-      border-radius: 10px;
-      padding: 20px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-
-    #messages {
-      height: 300px;
-      overflow-y: auto;
-      border: 1px solid #ccc;
-      padding: 10px;
-      background: #fafafa;
-      margin-bottom: 10px;
-    }
-
-    input {
-      padding: 10px;
-      margin: 5px 0;
-      width: 100%;
-      box-sizing: border-box;
-    }
-
-    button {
-      padding: 10px;
-      margin: 5px 5px 5px 0;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #45a049;
-    }
-
-    #friends-section {
-      margin-bottom: 15px;
-    }
-
-    #friends-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    #friends-list li {
-      cursor: pointer;
-      padding: 8px;
-      border: 1px solid #ddd;
-      margin-bottom: 5px;
-      border-radius: 5px;
-      background-color: #f8f8f8;
-    }
-
-    #friends-list li:hover {
-      background-color: #e0e0e0;
-    }
-
-    .message {
-      padding: 5px;
-      margin: 3px 0;
-    }
-
-    .message.me {
-      text-align: right;
-      color: blue;
-    }
-
-    .message.friend {
-      text-align: left;
-      color: green;
-    }
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #chat-area { display: none; }
+    #user-list li { cursor: pointer; margin: 5px 0; }
+    #messages { border: 1px solid #ccc; height: 200px; overflow-y: auto; padding: 10px; margin-top: 10px; }
+    input, button { margin-top: 10px; padding: 5px; }
   </style>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
 </head>
 <body>
-  <h1>Chat da Clínica Médica</h1>
+  <h1>Chat Firebase</h1>
 
-  <div id="login-section">
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Senha">
-    <button onclick="login()">Entrar</button>
+  <div id="login-area">
+    <button id="login-btn">Login com Google</button>
   </div>
 
-  <div id="chat-section" style="display:none;">
-    <div id="friends-section">
-      <h3>Escolha um amigo para conversar:</h3>
-      <ul id="friends-list"></ul>
+  <div id="chat-area">
+    <h3>Usuários para conversar:</h3>
+    <ul id="user-list"></ul>
+
+    <div id="chat-box">
+      <h3>Mensagens</h3>
+      <div id="messages"></div>
+      <input type="text" id="message-input" placeholder="Digite uma mensagem" />
+      <button id="send-btn">Enviar</button>
     </div>
-
-    <div id="messages"></div>
-    <input type="text" id="message-input" placeholder="Digite sua mensagem">
-    <button onclick="sendMessage()">Enviar</button>
-    <button onclick="logout()">Sair</button>
   </div>
 
-  <script type="module">
-    // Importando o Firebase Modular
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getAuth,
-      signInWithEmailAndPassword,
-      signOut,
-      onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import {
-      getFirestore,
-      collection,
-      addDoc,
-      onSnapshot,
-      query,
-      orderBy,
-      serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  <script>
+    // CONFIGURAÇÃO DO FIREBASE
+    const firebaseConfig = {
+      apiKey: "AIzaSyATG5P2NvdecjCPO7gzFNGs6l7plDrxY04",
+      authDomain: "sdel-16c6a.firebaseapp.com",
+      projectId: "sdel-16c6a",
+      storageBucket: "sdel-16c6a.firebasestorage.app",
+      messagingSenderId: "676676370586",
+      appId: "1:676676370586:web:444947d3dda78a80d9df23",
+      measurementId: "G-FZWQ9FYZG5"
+    };
 
-    // Configuração do Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyATG5P2NvdecjCPO7gzFNGs6l7plDrxY04",
-  authDomain: "sdel-16c6a.firebaseapp.com",
-  projectId: "sdel-16c6a",
-  storageBucket: "sdel-16c6a.firebasestorage.app",
-  messagingSenderId: "676676370586",
-  appId: "1:676676370586:web:444947d3dda78a80d9df23",
-  measurementId: "G-FZWQ9FYZG5"
-};
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
-    // Inicializando Firebase
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    let currentUser = null;
+    let selectedUser = null;
+    let chatUnsub = null;
 
-    // DOM
-    const loginSection = document.getElementById('login-section');
-    const chatSection = document.getElementById('chat-section');
-    const messagesDiv = document.getElementById('messages');
-    const friendsList = document.getElementById('friends-list');
-    const input = document.getElementById('message-input');
+    // LOGIN
+    document.getElementById("login-btn").onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider);
+    };
 
-    let selectedFriendEmail = null;
-
-    // Lista de amigos (pode vir do banco futuramente)
-    const amigos = [
-      "ana@email.com",
-      "maria@email.com",
-      "joao@email.com"
-    ];
-
-    function renderFriendsList() {
-      friendsList.innerHTML = '';
-      amigos.forEach(email => {
-        const li = document.createElement('li');
-        li.textContent = email;
-        li.onclick = () => selectFriend(email);
-        friendsList.appendChild(li);
-      });
-    }
-
-    function selectFriend(email) {
-      selectedFriendEmail = email;
-      listenMessages();
-    }
-
-    async function login() {
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      try {
-        await signInWithEmailAndPassword(auth, email, password);
-        console.log("Login realizado.");
-      } catch (error) {
-        alert("Erro no login: " + error.message);
-      }
-    }
-
-    async function logout() {
-      await signOut(auth);
-      messagesDiv.innerHTML = '';
-      selectedFriendEmail = null;
-    }
-
-    async function sendMessage() {
-      const text = input.value.trim();
-      const user = auth.currentUser;
-
-      if (text && user && selectedFriendEmail) {
-        const chatId = [user.email, selectedFriendEmail].sort().join("_");
-        await addDoc(collection(db, "chats", chatId, "messages"), {
-          text,
-          sender: user.email,
-          timestamp: serverTimestamp()
-        });
-        input.value = '';
-      }
-    }
-
-    function listenMessages() {
-      const user = auth.currentUser;
-      if (!user || !selectedFriendEmail) return;
-
-      const chatId = [user.email, selectedFriendEmail].sort().join("_");
-      const q = query(collection(db, "chats", chatId, "messages"), orderBy("timestamp"));
-
-      onSnapshot(q, snapshot => {
-        messagesDiv.innerHTML = '';
-        snapshot.forEach(doc => {
-          const msg = doc.data();
-          const div = document.createElement('div');
-          div.classList.add('message');
-          div.classList.add(msg.sender === user.email ? 'me' : 'friend');
-          div.textContent = `${msg.sender}: ${msg.text}`;
-          messagesDiv.appendChild(div);
-        });
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-      });
-    }
-
-    onAuthStateChanged(auth, user => {
+    // MONITORAR AUTENTICAÇÃO
+    auth.onAuthStateChanged(async user => {
       if (user) {
-        loginSection.style.display = 'none';
-        chatSection.style.display = 'block';
-        renderFriendsList();
-      } else {
-        loginSection.style.display = 'block';
-        chatSection.style.display = 'none';
+        currentUser = user;
+        document.getElementById("login-area").style.display = "none";
+        document.getElementById("chat-area").style.display = "block";
+
+        // Salvar usuário no Firestore
+        await db.collection("users").doc(user.uid).set({
+          name: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL
+        }, { merge: true });
+
+        loadUsers();
       }
     });
+
+    // CARREGAR USUÁRIOS
+    async function loadUsers() {
+      const userList = document.getElementById("user-list");
+      userList.innerHTML = "";
+      const snapshot = await db.collection("users").get();
+      snapshot.forEach(doc => {
+        if (doc.id !== currentUser.uid) {
+          const li = document.createElement("li");
+          li.textContent = doc.data().name;
+          li.onclick = () => selectUser(doc.id, doc.data().name);
+          userList.appendChild(li);
+        }
+      });
+    }
+
+    // SELECIONAR USUÁRIO PARA CONVERSA
+    function selectUser(uid, name) {
+      selectedUser = uid;
+      document.getElementById("messages").innerHTML = "";
+      if (chatUnsub) chatUnsub();
+
+      const chatId = [currentUser.uid, uid].sort().join("_");
+
+      chatUnsub = db.collection("chats").doc(chatId)
+        .onSnapshot(doc => {
+          const data = doc.data();
+          const messages = data?.messages || [];
+          const msgBox = document.getElementById("messages");
+          msgBox.innerHTML = messages.map(msg => 
+            `<div><strong>${msg.sender === currentUser.uid ? "Você" : name}:</strong> ${msg.text}</div>`
+          ).join("");
+          msgBox.scrollTop = msgBox.scrollHeight;
+        });
+    }
+
+    // ENVIAR MENSAGEM
+    document.getElementById("send-btn").onclick = async () => {
+      const text = document.getElementById("message-input").value;
+      if (!text || !selectedUser) return;
+
+      const chatId = [currentUser.uid, selectedUser].sort().join("_");
+      const chatRef = db.collection("chats").doc(chatId);
+
+      await chatRef.set({
+        users: [currentUser.uid, selectedUser],
+        messages: firebase.firestore.FieldValue.arrayUnion({
+          sender: currentUser.uid,
+          text,
+          timestamp: firebase.firestore.Timestamp.now()
+        })
+      }, { merge: true });
+
+      document.getElementById("message-input").value = "";
+    };
   </script>
 </body>
 </html>
