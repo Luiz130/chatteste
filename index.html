@@ -258,9 +258,9 @@
   // Selecionar usuário para conversar
   function selectUser(uid, name) {
     chatPartner = { uid, name };
-    chatHeader.textContent = Conversa com: ${name};
+    chatHeader.textContent = `Conversa com: ${name}`;
     document.querySelectorAll('.user').forEach(el => el.classList.remove('selected'));
-    const selectedEl = document.querySelector(.user[data-uid="${uid}"]);
+    const selectedEl = document.querySelector(`.user[data-uid="${uid}"]`);
     if (selectedEl) selectedEl.classList.add('selected');
 
     messageInput.disabled = false;
@@ -365,7 +365,7 @@
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUser = user;
-      userInfo.textContent = Você: ${user.displayName || user.email || user.uid.substring(0,5)};
+      userInfo.textContent = `Você: ${user.displayName || user.email || user.uid.substring(0,5)}`;
       signOutBtn.style.display = 'inline-block';
       loginContainer.style.display = 'none';
       container.style.display = 'flex';
