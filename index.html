@@ -2,29 +2,35 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Chat Firebase</title>
+  <title>Chat Firebase Bonito</title>
   <link rel="stylesheet" href="style.css">
-  <script type="module" src="app.js" defer></script>
+  <script type="module" src="main.js" defer></script>
 </head>
 <body>
   <div class="container">
-    <h1>Chat Firebase</h1>
+    <h1>💬 Chat com Firebase</h1>
 
-    <div id="loginArea">
+    <div id="loginArea" class="card">
       <input type="email" id="email" placeholder="Email">
       <input type="password" id="password" placeholder="Senha">
       <button id="loginBtn">Entrar</button>
+      <button id="registerBtn" class="secondary">Criar Conta</button>
     </div>
 
-    <div id="chatArea" style="display:none;">
-      <h2>Usuários</h2>
-      <ul id="usersList"></ul>
+    <div id="chatArea" class="card" style="display:none;">
+      <div class="user-list">
+        <h2>Usuários</h2>
+        <ul id="usersList"></ul>
+      </div>
 
-      <h2>Conversando com: <span id="activeUserName">Ninguém</span></h2>
-      <div id="messages"></div>
-
-      <input type="text" id="messageInput" placeholder="Digite sua mensagem...">
-      <button id="sendBtn">Enviar</button>
+      <div class="chat-box">
+        <h2>Conversando com: <span id="activeUserName">Ninguém</span></h2>
+        <div id="messages" class="messages-box"></div>
+        <div class="input-area">
+          <input type="text" id="messageInput" placeholder="Digite sua mensagem...">
+          <button id="sendBtn">Enviar</button>
+        </div>
+      </div>
     </div>
   </div>
 </body>
