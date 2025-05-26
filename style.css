@@ -1,85 +1,84 @@
 body {
-  font-family: Arial, sans-serif;
-  background: #f2f2f2;
   margin: 0;
-  padding: 0;
+  font-family: Arial, sans-serif;
+  background: #f0f2f5;
 }
 
 .container {
-  max-width: 900px;
-  margin: 40px auto;
-  padding: 20px;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+  display: flex;
+  height: 100vh;
 }
 
-h1 {
-  text-align: center;
-  color: #333;
-}
-
-.card {
-  padding: 20px;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  margin-top: 20px;
-}
-
-input[type="email"],
-input[type="password"],
-input[type="text"] {
-  width: 100%;
-  padding: 12px;
-  margin: 10px 0;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  box-sizing: border-box;
-}
-
-button {
-  padding: 12px 20px;
-  background: #4CAF50;
+.sidebar {
+  width: 250px;
+  background-color: #202c33;
   color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
+  padding: 1rem;
+  overflow-y: auto;
 }
 
-button.secondary {
-  background: #2196F3;
-  margin-left: 10px;
+.sidebar h2 {
+  margin-top: 0;
 }
 
-button:hover {
-  opacity: 0.9;
-}
-
-.user-list {
-  float: left;
-  width: 25%;
-  border-right: 1px solid #ccc;
-}
-
-.user-list ul {
+.sidebar ul {
   list-style: none;
   padding: 0;
 }
 
-.user-list li {
+.sidebar li {
   padding: 10px;
   cursor: pointer;
+  border-bottom: 1px solid #333;
 }
 
-.user-list li:hover {
-  background: #f0f0f0;
+.sidebar li:hover {
+  background-color: #2a3942;
 }
 
-.chat-box {
-  margin-left: 27%;
-  padding-left: 20px;
+.chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: white;
 }
 
-.messages-box {
-  height: 300px;
-  overflow-y
+#chatHeader {
+  background: #075e54;
+  color: white;
+  padding: 1rem;
+  font-weight: bold;
+}
+
+.messages {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.message {
+  margin-bottom: 1rem;
+}
+
+.message.sent {
+  text-align: right;
+}
+
+#messageForm {
+  display: flex;
+  padding: 1rem;
+  border-top: 1px solid #ccc;
+}
+
+#messageInput {
+  flex: 1;
+  padding: 0.5rem;
+}
+
+button {
+  padding: 0.5rem 1rem;
+  background-color: #25d366;
+  border: none;
+  color: white;
+  cursor: pointer;
+}
