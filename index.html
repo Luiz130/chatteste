@@ -2,11 +2,100 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Chat Clínica Médica</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Chat da Clínica Médica</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    #login-section,
+    #chat-section {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    #messages {
+      height: 300px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      padding: 10px;
+      background: #fafafa;
+      margin-bottom: 10px;
+    }
+
+    input {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    button {
+      padding: 10px;
+      margin: 5px 5px 5px 0;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    #friends-section {
+      margin-bottom: 15px;
+    }
+
+    #friends-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    #friends-list li {
+      cursor: pointer;
+      padding: 8px;
+      border: 1px solid #ddd;
+      margin-bottom: 5px;
+      border-radius: 5px;
+      background-color: #f8f8f8;
+    }
+
+    #friends-list li:hover {
+      background-color: #e0e0e0;
+    }
+
+    .message {
+      padding: 5px;
+      margin: 3px 0;
+    }
+
+    .message.me {
+      text-align: right;
+      color: blue;
+    }
+
+    .message.friend {
+      text-align: left;
+      color: green;
+    }
+  </style>
 </head>
 <body>
   <h1>Chat da Clínica Médica</h1>
+
   <div id="login-section">
     <input type="email" id="email" placeholder="Email">
     <input type="password" id="password" placeholder="Senha">
@@ -14,15 +103,146 @@
   </div>
 
   <div id="chat-section" style="display:none;">
+    <div id="friends-section">
+      <h3>Escolha um amigo para conversar:</h3>
+      <ul id="friends-list"></ul>
+    </div>
+
     <div id="messages"></div>
     <input type="text" id="message-input" placeholder="Digite sua mensagem">
     <button onclick="sendMessage()">Enviar</button>
     <button onclick="logout()">Sair</button>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  <script src="app.js"></script>
+  <script type="module">
+    // Importando o Firebase Modular
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      onSnapshot,
+      query,
+      orderBy,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // Configuração do Firebase
+    const firebaseConfig = {
+      apiKey: "SUA_API_KEY",
+      authDomain: "SEU_AUTH_DOMAIN",
+      projectId: "SEU_PROJECT_ID",
+      storageBucket: "SEU_BUCKET",
+      messagingSenderId: "SEU_SENDER_ID",
+      appId: "SEU_APP_ID",
+      measurementId: "SEU_MEASUREMENT_ID"
+    };
+
+    // Inicializando Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // DOM
+    const loginSection = document.getElementById('login-section');
+    const chatSection = document.getElementById('chat-section');
+    const messagesDiv = document.getElementById('messages');
+    const friendsList = document.getElementById('friends-list');
+    const input = document.getElementById('message-input');
+
+    let selectedFriendEmail = null;
+
+    // Lista de amigos (pode vir do banco futuramente)
+    const amigos = [
+      "ana@email.com",
+      "maria@email.com",
+      "joao@email.com"
+    ];
+
+    function renderFriendsList() {
+      friendsList.innerHTML = '';
+      amigos.forEach(email => {
+        const li = document.createElement('li');
+        li.textContent = email;
+        li.onclick = () => selectFriend(email);
+        friendsList.appendChild(li);
+      });
+    }
+
+    function selectFriend(email) {
+      selectedFriendEmail = email;
+      listenMessages();
+    }
+
+    async function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        console.log("Login realizado.");
+      } catch (error) {
+        alert("Erro no login: " + error.message);
+      }
+    }
+
+    async function logout() {
+      await signOut(auth);
+      messagesDiv.innerHTML = '';
+      selectedFriendEmail = null;
+    }
+
+    async function sendMessage() {
+      const text = input.value.trim();
+      const user = auth.currentUser;
+
+      if (text && user && selectedFriendEmail) {
+        const chatId = [user.email, selectedFriendEmail].sort().join("_");
+        await addDoc(collection(db, "chats", chatId, "messages"), {
+          text,
+          sender: user.email,
+          timestamp: serverTimestamp()
+        });
+        input.value = '';
+      }
+    }
+
+    function listenMessages() {
+      const user = auth.currentUser;
+      if (!user || !selectedFriendEmail) return;
+
+      const chatId = [user.email, selectedFriendEmail].sort().join("_");
+      const q = query(collection(db, "chats", chatId, "messages"), orderBy("timestamp"));
+
+      onSnapshot(q, snapshot => {
+        messagesDiv.innerHTML = '';
+        snapshot.forEach(doc => {
+          const msg = doc.data();
+          const div = document.createElement('div');
+          div.classList.add('message');
+          div.classList.add(msg.sender === user.email ? 'me' : 'friend');
+          div.textContent = `${msg.sender}: ${msg.text}`;
+          messagesDiv.appendChild(div);
+        });
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      });
+    }
+
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        loginSection.style.display = 'none';
+        chatSection.style.display = 'block';
+        renderFriendsList();
+      } else {
+        loginSection.style.display = 'block';
+        chatSection.style.display = 'none';
+      }
+    });
+  </script>
 </body>
 </html>
