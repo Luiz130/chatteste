@@ -1,13 +1,13 @@
+// Imports Firebase (ajuste a versão e caminhos conforme seu setup)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs, query,
-  where, orderBy, onSnapshot
+  getFirestore, collection, addDoc, query, where, orderBy, onSnapshot, getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-// Config Firebase
+// Config Firebase (use sua config)
 const firebaseConfig = {
   apiKey: "AIzaSyATG5P2NvdecjCPO7gzFNGs6l7plDrxY04",
   authDomain: "sdel-16c6a.firebaseapp.com",
@@ -26,22 +26,22 @@ const auth = getAuth(app);
 let currentUser = null;
 let selectedUser = null;
 
-// Elementos DOM
+// DOM Elements
 const userList = document.getElementById("userList");
 const messagesDiv = document.getElementById("messages");
 const chatHeader = document.getElementById("chatHeader");
 const form = document.getElementById("messageForm");
 const input = document.getElementById("messageInput");
 
-// Gera ID único para o chat entre dois usuários
+// Função para gerar chatId único para dois usuários
 function getChatId(uid1, uid2) {
   return [uid1, uid2].sort().join("_");
 }
 
-// Carrega lista de usuários (exceto o atual)
+// Exibe lista de usuários (exceto o atual)
 async function loadUserList() {
-  const snapshot = await getDocs(collection(db, "users"));
   userList.innerHTML = "";
+  const snapshot = await getDocs(collection(db, "users"));
   snapshot.forEach(doc => {
     const user = doc.data();
     if (user.uid !== currentUser.uid) {
@@ -51,15 +51,15 @@ async function loadUserList() {
       li.onclick = () => {
         selectedUser = user;
         chatHeader.textContent = `Conversando com ${user.name}`;
+        form.style.display = "flex"; // mostrar formulário só quando selecionar usuário
         loadMessages();
-        form.style.display = "flex"; // mostra o form quando seleciona alguém
       };
       userList.appendChild(li);
     }
   });
 }
 
-// Carrega mensagens em tempo real entre currentUser e selectedUser
+// Carrega mensagens entre currentUser e selectedUser em tempo real
 function loadMessages() {
   if (!selectedUser) return;
 
@@ -86,22 +86,19 @@ function loadMessages() {
   });
 }
 
-// Evento para enviar mensagem (com verificação)
+// Envio da mensagem com validações
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const text = input.value.trim();
-
   if (!text) {
     alert("Digite uma mensagem.");
     return;
   }
-
   if (!selectedUser || !selectedUser.uid) {
     alert("Selecione um usuário para conversar.");
     return;
   }
-
   if (!currentUser || !currentUser.uid) {
     alert("Usuário não autenticado.");
     return;
@@ -109,44 +106,64 @@ form.addEventListener("submit", async (e) => {
 
   try {
     const chatId = getChatId(currentUser.uid, selectedUser.uid);
-
     await addDoc(collection(db, "messages"), {
-      chatId: chatId,
+      chatId,
       from: currentUser.uid,
       to: selectedUser.uid,
-      text: text,
+      text,
       timestamp: Date.now()
     });
-
     input.value = "";
   } catch (error) {
     console.error("Erro ao enviar mensagem:", error);
-    alert("Erro ao enviar mensagem. Veja o console para detalhes.");
+    alert("Erro ao enviar mensagem. Veja o console.");
   }
 });
 
-// Autenticação Google e carregamento inicial
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    currentUser = user;
+// Autenticação Google e carregamento da lista
+async function loginWithGoogle() {
+  const provider = new GoogleAuthProvider();
+  try {
+    const result = await signInWithPopup(auth, provider);
+    currentUser = {
+      uid: result.user.uid,
+      name: result.user.displayName,
+      email: result.user.email
+    };
 
-    // Salva usuário no Firestore se não existir
-    const userRef = doc(db, "users", user.uid);
-    const userSnap = await getDoc(userRef);
+    // Salva/atualiza usuário no Firestore (coleção users)
+    await setDoc(doc(db, "users", currentUser.uid), currentUser);
 
-    if (!userSnap.exists()) {
-      await setDoc(userRef, {
-        uid: user.uid,
-        name: user.displayName || "Usuário sem nome"
-      });
-    }
-
+    // Exibe lista de usuários para conversar
     await loadUserList();
 
-    form.style.display = "none"; // esconde o form até selecionar usuário
+    form.style.display = "none"; // esconde form até selecionar usuário
+    chatHeader.textContent = "Selecione um usuário para conversar";
+
+  } catch (error) {
+    console.error("Erro no login:", error);
+  }
+}
+
+// Escuta mudanças de estado do usuário (login/logout)
+onAuthStateChanged(auth, user => {
+  if (user) {
+    currentUser = {
+      uid: user.uid,
+      name: user.displayName,
+      email: user.email
+    };
+    loadUserList();
+    form.style.display = "none";
     chatHeader.textContent = "Selecione um usuário para conversar";
   } else {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    currentUser = null;
+    userList.innerHTML = "";
+    messagesDiv.innerHTML = "";
+    form.style.display = "none";
+    chatHeader.textContent = "Faça login para usar o chat";
   }
 });
+
+// Iniciar login (pode ser ligado a um botão no seu HTML)
+document.getElementById("btnLoginGoogle").addEventListener("click", loginWithGoogle);
