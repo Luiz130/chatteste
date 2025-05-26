@@ -4,41 +4,160 @@
   <meta charset="UTF-8" />
   <title>Chat Firebase - Selecionar usuário</title>
   <style>
-    #users { float: left; width: 200px; border-right: 1px solid #ccc; height: 300px; overflow-y: auto; }
-    #chat { margin-left: 210px; height: 300px; display: flex; flex-direction: column; }
-    #messages { flex: 1; overflow-y: auto; border-bottom: 1px solid #ccc; padding: 10px; }
-    #inputMsg { margin-top: 10px; }
-    .message { margin-bottom: 8px; }
-    .message.you { text-align: right; color: blue; }
-    .message.them { text-align: left; color: green; }
-    .user { cursor: pointer; padding: 5px; border-bottom: 1px solid #eee; }
-    .user.selected { background-color: #ddd; }
+    * {
+      font-family: Arial, sans-serif;
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+
+    h2, h3 {
+      margin: 0 0 10px;
+    }
+
+    #container {
+      display: flex;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      background-color: #fff;
+      max-width: 800px;
+      margin: auto;
+    }
+
+    #users {
+      width: 200px;
+      border-right: 1px solid #ccc;
+      height: 400px;
+      overflow-y: auto;
+      background-color: #fafafa;
+    }
+
+    #chat {
+      flex: 1;
+      height: 400px;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+    }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      border-bottom: 1px solid #ccc;
+      padding: 10px;
+    }
+
+    #inputMsg {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    #messageInput {
+      flex: 1;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+
+    #sendBtn, #loginGoogleBtn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+
+    #sendBtn:hover, #loginGoogleBtn:hover {
+      background-color: #45a049;
+    }
+
+    .message {
+      margin-bottom: 8px;
+    }
+
+    .message.you {
+      text-align: right;
+      color: #2196F3;
+    }
+
+    .message.them {
+      text-align: left;
+      color: #4CAF50;
+    }
+
+    .user {
+      cursor: pointer;
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .user:hover {
+      background-color: #eee;
+    }
+
+    .user.selected {
+      background-color: #ddd;
+    }
+
+    #loginContainer {
+      text-align: center;
+      margin-bottom: 20px;
+    }
   </style>
 </head>
 <body>
 
-<h2>Usuários</h2>
-<div id="users"></div>
+<div id="loginContainer">
+  <button id="loginGoogleBtn">Entrar com Google</button>
+</div>
 
-<div id="chat">
-  <h3>Conversa com: <span id="chatWith">Nenhum</span></h3>
-  <div id="messages"></div>
-  <div id="inputMsg">
-    <input type="text" id="messageInput" placeholder="Digite sua mensagem..." />
-    <button id="sendBtn">Enviar</button>
+<div id="container" style="display: none;">
+  <div id="users"></div>
+
+  <div id="chat">
+    <h3>Conversa com: <span id="chatWith">Nenhum</span></h3>
+    <div id="messages"></div>
+    <div id="inputMsg">
+      <input type="text" id="messageInput" placeholder="Digite sua mensagem..." />
+      <button id="sendBtn">Enviar</button>
+    </div>
   </div>
 </div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-app.js";
-  import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, onSnapshot, addDoc, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-firestore.js";
-  import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-auth.js";
+  import {
+    getFirestore,
+    collection,
+    doc,
+    setDoc,
+    getDoc,
+    getDocs,
+    query,
+    orderBy,
+    onSnapshot,
+    addDoc,
+    serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-firestore.js";
+  import {
+    getAuth,
+    onAuthStateChanged,
+    signInWithPopup,
+    GoogleAuthProvider
+  } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyATG5P2NvdecjCPO7gzFNGs6l7plDrxY04",
     authDomain: "sdel-16c6a.firebaseapp.com",
     projectId: "sdel-16c6a",
-    storageBucket: "sdel-16c6a.firebasestorage.app",
+    storageBucket: "sdel-16c6a.appspot.com",
     messagingSenderId: "676676370586",
     appId: "1:676676370586:web:444947d3dda78a80d9df23",
     measurementId: "G-FZWQ9FYZG5"
@@ -57,6 +176,19 @@
   const messagesDiv = document.getElementById('messages');
   const messageInput = document.getElementById('messageInput');
   const sendBtn = document.getElementById('sendBtn');
+  const loginBtn = document.getElementById('loginGoogleBtn');
+  const loginContainer = document.getElementById('loginContainer');
+  const chatContainer = document.getElementById('container');
+
+  loginBtn.onclick = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Erro no login com Google:", error);
+      alert("Erro no login com Google");
+    }
+  };
 
   async function loadUsers() {
     usersDiv.innerHTML = 'Carregando usuários...';
@@ -95,7 +227,6 @@
     if (selectedEl) selectedEl.classList.add('selected');
 
     if (unsubscribeMessages) unsubscribeMessages();
-
     loadMessages();
   }
 
@@ -103,7 +234,6 @@
     messagesDiv.innerHTML = 'Carregando mensagens...';
 
     const chatId = [currentUser.uid, chatPartner.uid].sort().join('_');
-
     const messagesRef = collection(db, "chats", chatId, "messages");
     const q = query(messagesRef, orderBy("createdAt", "asc"));
 
@@ -153,26 +283,23 @@
   sendBtn.onclick = sendMessage;
   messageInput.onkeydown = (e) => { if (e.key === 'Enter') sendMessage(); };
 
-  // Autenticação anônima para teste
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUser = user;
-      console.log("Usuário autenticado:", user.uid);
+      loginContainer.style.display = 'none';
+      chatContainer.style.display = 'flex';
 
-      // Verifica se usuário existe no Firestore e cria se não existir
       const userDocRef = doc(db, "users", user.uid);
       const userDocSnap = await getDoc(userDocRef);
       if (!userDocSnap.exists()) {
-        await setDoc(userDocRef, { name: "Usuário " + user.uid.substring(0,5) });
-        console.log("Usuário criado no Firestore");
+        await setDoc(userDocRef, {
+          name: user.displayName || "Usuário"
+        });
       }
 
       await loadUsers();
-    } else {
-      await signInAnonymously(auth);
     }
   });
-
 </script>
 
 </body>
