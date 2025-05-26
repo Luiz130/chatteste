@@ -1,26 +1,166 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Chat Firebase</title>
-  <link rel="stylesheet" href="style.css"/>
+  <title>Chat Firebase - Selecionar usuário</title>
+  <style>
+    #users { float: left; width: 200px; border-right: 1px solid #ccc; height: 300px; overflow-y: auto; }
+    #chat { margin-left: 210px; height: 300px; display: flex; flex-direction: column; }
+    #messages { flex: 1; overflow-y: auto; border-bottom: 1px solid #ccc; padding: 10px; }
+    #inputMsg { margin-top: 10px; }
+    .message { margin-bottom: 8px; }
+    .message.you { text-align: right; color: blue; }
+    .message.them { text-align: left; color: green; }
+    .user { cursor: pointer; padding: 5px; border-bottom: 1px solid #eee; }
+    .user.selected { background-color: #ddd; }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <aside class="sidebar">
-      <h2>Usuários</h2>
-      <ul id="userList"></ul>
-    </aside>
-    <main class="chat">
-      <div id="chatHeader">Selecione um usuário</div>
-      <div id="messages" class="messages"></div>
-      <form id="messageForm">
-        <input type="text" id="messageInput" placeholder="Digite uma mensagem..." required/>
-        <button type="submit">📨</button>
-      </form>
-    </main>
+
+<h2>Usuários</h2>
+<div id="users"></div>
+
+<div id="chat">
+  <h3>Conversa com: <span id="chatWith">Nenhum</span></h3>
+  <div id="messages"></div>
+  <div id="inputMsg">
+    <input type="text" id="messageInput" placeholder="Digite sua mensagem..." />
+    <button id="sendBtn">Enviar</button>
   </div>
-  <script type="module" src="script.js"></script>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-app.js";
+  import { getFirestore, collection, doc, setDoc, getDocs, query, where, onSnapshot, addDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-firestore.js";
+  import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyATG5P2NvdecjCPO7gzFNGs6l7plDrxY04",
+    authDomain: "sdel-16c6a.firebaseapp.com",
+    projectId: "sdel-16c6a",
+    storageBucket: "sdel-16c6a.firebasestorage.app",
+    messagingSenderId: "676676370586",
+    appId: "1:676676370586:web:444947d3dda78a80d9df23",
+    measurementId: "G-FZWQ9FYZG5"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  let currentUser = null;
+  let chatPartner = null;
+  let unsubscribeMessages = null;
+
+  const usersDiv = document.getElementById('users');
+  const chatWithSpan = document.getElementById('chatWith');
+  const messagesDiv = document.getElementById('messages');
+  const messageInput = document.getElementById('messageInput');
+  const sendBtn = document.getElementById('sendBtn');
+
+  // Função para mostrar lista de usuários, exceto o usuário atual
+  async function loadUsers() {
+    usersDiv.innerHTML = 'Carregando usuários...';
+    const usersSnapshot = await getDocs(collection(db, "users"));
+    usersDiv.innerHTML = '';
+    usersSnapshot.forEach(docSnap => {
+      const userData = docSnap.data();
+      const uid = docSnap.id;
+      if (uid !== currentUser.uid) {
+        const userDiv = document.createElement('div');
+        userDiv.textContent = userData.name || "Usuário sem nome";
+        userDiv.classList.add('user');
+        userDiv.dataset.uid = uid;
+        userDiv.onclick = () => selectUser(uid, userData.name);
+        usersDiv.appendChild(userDiv);
+      }
+    });
+  }
+
+  // Seleciona usuário para conversar
+  function selectUser(uid, name) {
+    chatPartner = { uid, name };
+    chatWithSpan.textContent = name;
+
+    // Marcar visualmente o usuário selecionado
+    document.querySelectorAll('.user').forEach(el => el.classList.remove('selected'));
+    const selectedEl = document.querySelector(`.user[data-uid="${uid}"]`);
+    if (selectedEl) selectedEl.classList.add('selected');
+
+    // Desinscrever conversa anterior se existir
+    if (unsubscribeMessages) unsubscribeMessages();
+
+    loadMessages();
+  }
+
+  // Carrega mensagens entre currentUser e chatPartner
+  function loadMessages() {
+    messagesDiv.innerHTML = 'Carregando mensagens...';
+
+    // A conversa tem um ID composto para garantir mesma conversa entre 2 usuários (ordem alfabética)
+    const chatId = [currentUser.uid, chatPartner.uid].sort().join('_');
+
+    const messagesRef = collection(db, "chats", chatId, "messages");
+    const q = query(messagesRef, orderBy("createdAt", "asc"));
+
+    unsubscribeMessages = onSnapshot(q, (querySnapshot) => {
+      messagesDiv.innerHTML = '';
+      querySnapshot.forEach(docSnap => {
+        const msg = docSnap.data();
+        const div = document.createElement('div');
+        div.classList.add('message');
+        if (msg.sender === currentUser.uid) {
+          div.classList.add('you');
+          div.textContent = "Você: " + msg.text;
+        } else {
+          div.classList.add('them');
+          div.textContent = chatPartner.name + ": " + msg.text;
+        }
+        messagesDiv.appendChild(div);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      });
+    });
+  }
+
+  // Envia mensagem para Firestore
+  async function sendMessage() {
+    const text = messageInput.value.trim();
+    if (!text || !chatPartner) return;
+
+    const chatId = [currentUser.uid, chatPartner.uid].sort().join('_');
+    const messagesRef = collection(db, "chats", chatId, "messages");
+
+    await addDoc(messagesRef, {
+      text,
+      sender: currentUser.uid,
+      createdAt: new Date()
+    });
+
+    messageInput.value = '';
+  }
+
+  sendBtn.onclick = sendMessage;
+  messageInput.onkeydown = (e) => { if (e.key === 'Enter') sendMessage(); };
+
+  // Autenticação anônima para exemplo (substituir pela sua autenticação real)
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      currentUser = user;
+      console.log("Usuário autenticado:", user.uid);
+
+      // Criar documento do usuário no Firestore caso não exista (com nome simples)
+      const userDocRef = doc(db, "users", user.uid);
+      const userDocSnap = await getDocs(userDocRef);
+      if (!userDocSnap.exists()) {
+        await setDoc(userDocRef, { name: "Usuário " + user.uid.substring(0,5) });
+      }
+
+      await loadUsers();
+    } else {
+      await signInAnonymously(auth);
+    }
+  });
+</script>
+
 </body>
 </html>
