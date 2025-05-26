@@ -2,193 +2,142 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Chat Firebase com Google</title>
+  <title>Chat Azul com Sugestões</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #e3f2fd;
-      margin: 0; padding: 0;
-      display: flex; flex-direction: column; height: 100vh;
+      background-color: #e3f2fd;
+      color: #0d47a1;
+      margin: 0;
+      padding: 0;
     }
+
     header {
-      background: #1565c0;
+      background-color: #1565c0;
       color: white;
-      padding: 15px 20px;
-      display: flex; justify-content: space-between; align-items: center;
+      padding: 1rem;
+      text-align: center;
     }
-    #userInfo { font-weight: bold; }
-    #signOutBtn {
-      background: #0d47a1; border: none; color: white;
-      padding: 8px 15px; cursor: pointer; border-radius: 4px;
+
+    #user-info {
+      text-align: center;
+      margin-top: 1rem;
     }
-    #container {
-      flex: 1; display: flex; overflow: hidden;
-    }
+
     #users {
-      width: 250px;
-      background: #bbdefb;
+      background-color: #bbdefb;
+      padding: 1rem;
+      max-height: 200px;
       overflow-y: auto;
-      border-right: 2px solid #90caf9;
-      display: flex; flex-direction: column;
+      border-bottom: 2px solid #1565c0;
     }
-    #users h2 {
-      margin: 10px; font-size: 18px; color: #0d47a1;
-    }
-    #searchInput {
-      margin: 10px;
-      padding: 8px;
-      border-radius: 4px;
-      border: 1px solid #90caf9;
-      font-size: 14px;
-    }
-    .user {
-      display: flex;
-      align-items: center;
-      padding: 10px;
-      cursor: pointer;
-      border-bottom: 1px solid #90caf9;
-      color: #0d47a1;
-      transition: background 0.2s;
-    }
-    .user:hover, .user.selected {
-      background: #90caf9;
-      color: white;
-    }
-    .user img {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      margin-right: 10px;
-    }
+
     #chat {
-      flex: 1;
       display: flex;
       flex-direction: column;
-      background: white;
-    }
-    #chatHeader {
-      background: #2196f3;
-      color: white;
-      padding: 15px 20px;
-      font-weight: bold;
-    }
-    #messages {
-      flex: 1;
-      padding: 20px;
+      height: 400px;
       overflow-y: auto;
-      background: #e3f2fd;
+      padding: 1rem;
+      border-bottom: 2px solid #1565c0;
     }
+
     .message {
+      margin-bottom: 0.5rem;
+      padding: 0.5rem;
+      border-radius: 8px;
       max-width: 60%;
-      margin-bottom: 12px;
-      padding: 10px 15px;
-      border-radius: 15px;
       word-wrap: break-word;
-      font-size: 14px;
-      line-height: 1.3;
     }
-    .message.you {
-      background: #0d47a1;
+
+    .own {
+      background-color: #1976d2;
       color: white;
-      margin-left: auto;
-      text-align: right;
-      border-bottom-right-radius: 0;
+      align-self: flex-end;
     }
-    .message.them {
-      background: #90caf9;
+
+    .other {
+      background-color: #e3f2fd;
       color: #0d47a1;
-      margin-right: auto;
-      text-align: left;
-      border-bottom-left-radius: 0;
+      align-self: flex-start;
     }
-    #inputArea {
+
+    #input-area {
       display: flex;
-      padding: 10px 15px;
-      border-top: 1px solid #90caf9;
+      padding: 1rem;
+      background: #e3f2fd;
+      position: relative;
     }
-    #messageInput {
+
+    #message {
       flex: 1;
-      padding: 10px;
-      font-size: 14px;
-      border: 1px solid #90caf9;
-      border-radius: 20px;
-      outline: none;
-    }
-    #sendBtn {
-      background: #1565c0;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      margin-left: 10px;
-      font-weight: bold;
-      border-radius: 20px;
-      cursor: pointer;
-    }
-    #sendBtn:disabled {
-      background: #90caf9;
-      cursor: not-allowed;
-    }
-    #loginContainer {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #bbdefb;
-      flex-direction: column;
-    }
-    #googleSignInBtn {
-      background: #4285f4;
-      color: white;
-      border: none;
-      padding: 12px 25px;
+      padding: 0.5rem;
       font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      border-radius: 5px;
-      display: flex;
-      align-items: center;
     }
-    #googleSignInBtn img {
-      height: 20px;
-      margin-right: 10px;
+
+    #send {
+      background-color: #1976d2;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+    }
+
+    #login-btn {
+      background-color: #0d47a1;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      margin-top: 1rem;
+      cursor: pointer;
+    }
+
+    #suggestions {
+      position: absolute;
+      background-color: white;
+      border: 1px solid #1976d2;
+      border-radius: 4px;
+      z-index: 10;
+      color: #0d47a1;
+      max-height: 150px;
+      overflow-y: auto;
+      display: none;
+      top: 50px;
+      left: 10px;
+      width: 300px;
+    }
+
+    .suggestion-item {
+      padding: 0.5rem;
+      cursor: pointer;
+    }
+
+    .suggestion-item:hover {
+      background-color: #bbdefb;
     }
   </style>
 </head>
 <body>
 
 <header>
-  <div id="userInfo">Não autenticado</div>
-  <button id="signOutBtn" style="display:none;">Sair</button>
+  <h1>Chat Azul com Firebase</h1>
 </header>
 
-<div id="container" style="display:none;">
-  <div id="users">
-    <h2>Buscar usuário</h2>
-    <input type="text" id="searchInput" placeholder="Digite o nome..." />
-    <div id="userList"></div>
-  </div>
-  <div id="chat">
-    <div id="chatHeader">Selecione um usuário para conversar</div>
-    <div id="messages"></div>
-    <div id="inputArea">
-      <input id="messageInput" type="text" placeholder="Digite sua mensagem..." disabled />
-      <button id="sendBtn" disabled>Enviar</button>
-    </div>
-  </div>
-</div>
+<div id="user-info"></div>
+<button id="login-btn">Entrar com Google</button>
 
-<div id="loginContainer">
-  <button id="googleSignInBtn">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/512px-Google_%22G%22_Logo.svg.png" alt="Google Logo" />
-    Entrar com Google
-  </button>
+<div id="users"></div>
+<div id="chat"></div>
+
+<div id="input-area" style="display:none;">
+  <input type="text" id="message" placeholder="Digite sua mensagem..." autocomplete="off" />
+  <button id="send">Enviar</button>
+  <div id="suggestions"></div>
 </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-app.js";
-  import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, orderBy, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-firestore.js";
-  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-auth.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyATG5P2NvdecjCPO7gzFNGs6l7plDrxY04",
@@ -201,157 +150,124 @@
   };
 
   const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
   const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
+  const db = getFirestore(app);
 
-  const userInfo = document.getElementById('userInfo');
-  const signOutBtn = document.getElementById('signOutBtn');
-  const container = document.getElementById('container');
-  const loginContainer = document.getElementById('loginContainer');
-  const googleSignInBtn = document.getElementById('googleSignInBtn');
-  const userListDiv = document.getElementById('userList');
-  const chatHeader = document.getElementById('chatHeader');
-  const messagesDiv = document.getElementById('messages');
-  const messageInput = document.getElementById('messageInput');
-  const sendBtn = document.getElementById('sendBtn');
-  const searchInput = document.getElementById('searchInput');
+  const chat = document.getElementById("chat");
+  const loginBtn = document.getElementById("login-btn");
+  const userInfo = document.getElementById("user-info");
+  const usersDiv = document.getElementById("users");
+  const messageInput = document.getElementById("message");
+  const sendBtn = document.getElementById("send");
+  const inputArea = document.getElementById("input-area");
+  const suggestionsDiv = document.getElementById("suggestions");
 
   let currentUser = null;
-  let chatPartner = null;
-  let unsubscribeMessages = null;
   let allUsers = [];
 
-  async function createUserIfNotExists(user) {
-    const ref = doc(db, "users", user.uid);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) {
-      await setDoc(ref, {
-        name: user.displayName || "Sem nome",
-        photoURL: user.photoURL || ""
-      });
+  loginBtn.addEventListener("click", async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      alert("Erro ao entrar: " + error.message);
     }
-  }
-
-  function renderUserList(filter = "") {
-    userListDiv.innerHTML = "";
-    const filtered = allUsers.filter(u =>
-      u.uid !== currentUser.uid &&
-      u.name.toLowerCase().includes(filter.toLowerCase())
-    );
-    if (filtered.length === 0) {
-      userListDiv.innerHTML = "<p style='padding:10px;'>Nenhum usuário encontrado.</p>";
-      return;
-    }
-    for (const user of filtered) {
-      const div = document.createElement('div');
-      div.classList.add('user');
-      div.dataset.uid = user.uid;
-      div.innerHTML = `<img src="${user.photoURL}" alt="foto" />${user.name}`;
-      div.onclick = () => selectUser(user);
-      userListDiv.appendChild(div);
-    }
-  }
-
-  async function loadAllUsers() {
-    const snapshot = await getDocs(collection(db, "users"));
-    allUsers = snapshot.docs.map(doc => ({
-      uid: doc.id,
-      ...doc.data()
-    }));
-    renderUserList();
-  }
-
-  function selectUser(user) {
-    chatPartner = user;
-    chatHeader.textContent = `Conversa com: ${user.name}`;
-    document.querySelectorAll('.user').forEach(el => el.classList.remove('selected'));
-    const selectedEl = document.querySelector(`.user[data-uid="${user.uid}"]`);
-    if (selectedEl) selectedEl.classList.add('selected');
-    messageInput.disabled = false;
-    sendBtn.disabled = false;
-    if (unsubscribeMessages) unsubscribeMessages();
-    loadMessages();
-  }
-
-  function loadMessages() {
-    messagesDiv.innerHTML = "";
-    const chatId = [currentUser.uid, chatPartner.uid].sort().join("_");
-    const msgRef = collection(db, "chats", chatId, "messages");
-    const q = query(msgRef, orderBy("createdAt", "asc"));
-
-    unsubscribeMessages = onSnapshot(q, snapshot => {
-      messagesDiv.innerHTML = "";
-      snapshot.forEach(doc => {
-        const msg = doc.data();
-        const div = document.createElement('div');
-        div.classList.add('message');
-        if (msg.sender === currentUser.uid) {
-          div.classList.add('you');
-          div.textContent = "Você: " + msg.text;
-        } else {
-          div.classList.add('them');
-          div.textContent = chatPartner.name + ": " + msg.text;
-        }
-        messagesDiv.appendChild(div);
-      });
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    });
-  }
-
-  async function sendMessage() {
-    const text = messageInput.value.trim();
-    if (!text || !chatPartner) return;
-    const chatId = [currentUser.uid, chatPartner.uid].sort().join("_");
-    const msgRef = collection(db, "chats", chatId, "messages");
-    await addDoc(msgRef, {
-      text,
-      sender: currentUser.uid,
-      createdAt: serverTimestamp()
-    });
-    messageInput.value = "";
-  }
-
-  sendBtn.onclick = sendMessage;
-  messageInput.addEventListener('keydown', e => {
-    if (e.key === "Enter") sendMessage();
   });
 
-  googleSignInBtn.onclick = async () => {
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      await createUserIfNotExists(user);
-    } catch (err) {
-      alert("Erro no login.");
-    }
-  };
-
-  signOutBtn.onclick = () => signOut(auth);
-
-  onAuthStateChanged(auth, async user => {
+  onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUser = user;
-      userInfo.textContent = `Você: ${user.displayName || user.email}`;
-      signOutBtn.style.display = 'inline-block';
-      loginContainer.style.display = 'none';
-      container.style.display = 'flex';
-      await createUserIfNotExists(user);
-      await loadAllUsers();
-    } else {
-      currentUser = null;
-      chatPartner = null;
-      userInfo.textContent = "Não autenticado";
-      signOutBtn.style.display = 'none';
-      loginContainer.style.display = 'flex';
-      container.style.display = 'none';
+      userInfo.innerHTML = `<p>Olá, <strong>${user.displayName || user.email}</strong> 👋</p>`;
+      loginBtn.style.display = "none";
+      inputArea.style.display = "flex";
+
+      // Salva usuário no Firestore
+      const userRef = doc(db, "users", user.uid);
+      await setDoc(userRef, {
+        uid: user.uid,
+        name: user.displayName || "Usuário sem nome",
+        email: user.email,
+      });
+
+      // Obter lista de usuários
+      const userSnap = await getDocs(collection(db, "users"));
+      allUsers = userSnap.docs.map(doc => doc.data());
+
+      mostrarUsuarios();
+
+      // Ouvir mensagens
+      const q = query(collection(db, "messages"), orderBy("createdAt"));
+      onSnapshot(q, (snapshot) => {
+        chat.innerHTML = "";
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          const div = document.createElement("div");
+          div.className = "message " + (data.uid === currentUser.uid ? "own" : "other");
+          div.textContent = `${data.name || "Desconhecido"}: ${data.text}`;
+          chat.appendChild(div);
+          chat.scrollTop = chat.scrollHeight;
+        });
+      });
     }
   });
 
-  searchInput.addEventListener('input', e => {
-    renderUserList(e.target.value);
+  sendBtn.addEventListener("click", async () => {
+    const text = messageInput.value.trim();
+    if (text === "") return;
+
+    await addDoc(collection(db, "messages"), {
+      uid: currentUser.uid,
+      name: currentUser.displayName || "Usuário sem nome",
+      text: text,
+      createdAt: serverTimestamp(),
+    });
+
+    messageInput.value = "";
+    suggestionsDiv.style.display = "none";
+  });
+
+  async function mostrarUsuarios() {
+    usersDiv.innerHTML = "<strong>Usuários:</strong><br>";
+    allUsers.forEach(user => {
+      usersDiv.innerHTML += `<div>${user.name || "Usuário sem nome"}</div>`;
+    });
+  }
+
+  // Sugestões de nome com @
+  messageInput.addEventListener("input", () => {
+    const text = messageInput.value;
+    const lastWord = text.split(" ").pop();
+
+    if (lastWord.startsWith("@")) {
+      const query = lastWord.slice(1).toLowerCase();
+      const filtered = allUsers.filter(u =>
+        (u.name || "Usuário sem nome").toLowerCase().includes(query)
+      );
+
+      if (filtered.length > 0) {
+        suggestionsDiv.innerHTML = "";
+        filtered.forEach(u => {
+          const div = document.createElement("div");
+          div.className = "suggestion-item";
+          div.textContent = `@${u.name || "Usuário sem nome"}`;
+          div.addEventListener("click", () => {
+            const words = text.split(" ");
+            words.pop();
+            words.push(`@${u.name}`);
+            messageInput.value = words.join(" ") + " ";
+            suggestionsDiv.style.display = "none";
+            messageInput.focus();
+          });
+          suggestionsDiv.appendChild(div);
+        });
+        suggestionsDiv.style.display = "block";
+      } else {
+        suggestionsDiv.style.display = "none";
+      }
+    } else {
+      suggestionsDiv.style.display = "none";
+    }
   });
 </script>
-
 </body>
 </html>
