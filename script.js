@@ -7,6 +7,7 @@ import {
   getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyATG5P2NvdecjCPO7gzFNGs6l7plDrxY04",
   authDomain: "sdel-16c6a.firebaseapp.com",
@@ -21,6 +22,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
+// Variáveis globais
 let currentUser = null;
 let selectedUser = null;
 
@@ -31,12 +33,12 @@ const chatHeader = document.getElementById("chatHeader");
 const form = document.getElementById("messageForm");
 const input = document.getElementById("messageInput");
 
-// Função para montar um ID único para o chat
+// Gera ID do chat entre dois usuários
 function getChatId(uid1, uid2) {
   return [uid1, uid2].sort().join("_");
 }
 
-// Carregar lista de usuários
+// Carrega lista de usuários do Firestore
 async function loadUserList() {
   const snapshot = await getDocs(collection(db, "users"));
   const users = [];
@@ -47,7 +49,6 @@ async function loadUserList() {
     }
   });
 
-  // Renderiza
   userList.innerHTML = "";
   users.forEach(user => {
     const li = document.createElement("li");
@@ -61,7 +62,7 @@ async function loadUserList() {
   });
 }
 
-// Carregar mensagens do Firestore
+// Carrega mensagens entre currentUser e selectedUser
 function loadMessages() {
   if (!selectedUser) return;
 
@@ -87,23 +88,41 @@ function loadMessages() {
   });
 }
 
-// Enviar mensagem
+// ✅ Corrigido: Enviar mensagem com verificação
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
-  if (!input.value.trim() || !selectedUser) return;
 
-  const chatId = getChatId(currentUser.uid, selectedUser.uid);
-  await addDoc(collection(db, "messages"), {
-    chatId,
-    from: currentUser.uid,
-    to: selectedUser.uid,
-    text: input.value.trim(),
-    timestamp: Date.now()
-  });
-  input.value = "";
+  const text = input.value.trim();
+
+  if (!text) {
+    alert("Digite uma mensagem.");
+    return;
+  }
+
+  if (!currentUser || !selectedUser) {
+    alert("Selecione um usuário para conversar.");
+    return;
+  }
+
+  try {
+    const chatId = getChatId(currentUser.uid, selectedUser.uid);
+
+    await addDoc(collection(db, "messages"), {
+      chatId: chatId,
+      from: currentUser.uid,
+      to: selectedUser.uid,
+      text: text,
+      timestamp: Date.now()
+    });
+
+    input.value = "";
+  } catch (error) {
+    console.error("Erro ao enviar mensagem:", error);
+    alert("Erro ao enviar mensagem. Veja o console.");
+  }
 });
 
-// Login automático com Google
+// Login com Google
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
