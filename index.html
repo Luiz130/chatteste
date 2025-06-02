@@ -2,14 +2,24 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Painel com Firebase Modular</title>
+  <title>Painel com Login Google</title>
   <style>
-    /* Coloque aqui o CSS do painel que você já tem */
+    #painel, .secaoPainel { display: none; }
+    #botaoPainel { cursor: pointer; padding: 8px; background: #007BFF; color: white; border-radius: 8px; width: fit-content; margin: 10px; }
+    #painel { padding: 10px; border: 1px solid #ccc; margin: 10px; background: #f9f9f9; }
+    #cabecalhoPainel { font-weight: bold; margin-bottom: 10px; }
   </style>
 </head>
 <body>
 
-<div id="botaoPainel">🛠️</div>
+<!-- Botão login -->
+<div id="loginContainer">
+  <button id="btnLogin">🔐 Entrar com Google</button>
+  <span id="userName"></span>
+</div>
+
+<!-- Painel -->
+<div id="botaoPainel">🛠️ Abrir Painel</div>
 
 <div id="painel">
   <div id="cabecalhoPainel">Painel</div>
@@ -28,10 +38,10 @@
   </div>
 </div>
 
-<!-- Firebase Modular SDK -->
+<!-- Firebase -->
 <script type="module">
-  // Importando módulos necessários
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
   const firebaseConfig = {
@@ -46,40 +56,56 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
-  const userId = "usuario_demo"; // Substituir por UID real se tiver login
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+
+  let uid = null;
+
+  // === Login Google ===
+  document.getElementById('btnLogin').onclick = () => {
+    signInWithPopup(auth, provider).then(result => {
+      const user = result.user;
+      document.getElementById('userName').textContent = `👤 ${user.displayName}`;
+    }).catch(error => {
+      alert("Erro no login: " + error.message);
+    });
+  };
+
+  // === Após login ===
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      uid = user.uid;
+      document.getElementById('userName').textContent = `👤 ${user.displayName}`;
+      carregarNotas(uid);
+      carregarCronometro(uid);
+    }
+  });
 
   // === BLOCO DE NOTAS ===
   const textareaNotas = document.getElementById('textareaNotas');
 
-  // Carregar do Firebase
-  get(child(ref(db), `usuarios/${userId}/anotacoes`)).then(snapshot => {
-    if (snapshot.exists()) {
-      textareaNotas.value = snapshot.val();
-    }
-  });
+  function carregarNotas(uid) {
+    get(child(ref(db), `usuarios/${uid}/anotacoes`)).then(snapshot => {
+      if (snapshot.exists()) textareaNotas.value = snapshot.val();
+    });
+  }
 
-  // Salvar automaticamente ao digitar
   textareaNotas.addEventListener('input', () => {
-    set(ref(db, `usuarios/${userId}/anotacoes`), textareaNotas.value);
+    if (uid) set(ref(db, `usuarios/${uid}/anotacoes`), textareaNotas.value);
   });
 
   // === CRONÔMETRO ===
   let segundos = 0, minutos = 0, horas = 0;
   let intervalo = null;
-
   const cronometro = document.getElementById('cronometro');
-
   const formatar = (n) => n.toString().padStart(2, '0');
 
   function atualizarCronometro() {
     segundos++;
     if (segundos === 60) { segundos = 0; minutos++; }
     if (minutos === 60) { minutos = 0; horas++; }
-
     cronometro.textContent = `${formatar(horas)}:${formatar(minutos)}:${formatar(segundos)}`;
-
-    // Salvar tempo
-    set(ref(db, `usuarios/${userId}/cronometro`), { horas, minutos, segundos });
+    if (uid) set(ref(db, `usuarios/${uid}/cronometro`), { horas, minutos, segundos });
   }
 
   function iniciarCronometro() {
@@ -95,19 +121,20 @@
     pararCronometro();
     horas = minutos = segundos = 0;
     cronometro.textContent = "00:00:00";
-    set(ref(db, `usuarios/${userId}/cronometro`), { horas: 0, minutos: 0, segundos: 0 });
+    if (uid) set(ref(db, `usuarios/${uid}/cronometro`), { horas: 0, minutos: 0, segundos: 0 });
   }
 
-  // Carregar tempo salvo
-  get(child(ref(db), `usuarios/${userId}/cronometro`)).then(snapshot => {
-    if (snapshot.exists()) {
-      const tempo = snapshot.val();
-      horas = tempo.horas || 0;
-      minutos = tempo.minutos || 0;
-      segundos = tempo.segundos || 0;
-      cronometro.textContent = `${formatar(horas)}:${formatar(minutos)}:${formatar(segundos)}`;
-    }
-  });
+  function carregarCronometro(uid) {
+    get(child(ref(db), `usuarios/${uid}/cronometro`)).then(snapshot => {
+      if (snapshot.exists()) {
+        const tempo = snapshot.val();
+        horas = tempo.horas || 0;
+        minutos = tempo.minutos || 0;
+        segundos = tempo.segundos || 0;
+        cronometro.textContent = `${formatar(horas)}:${formatar(minutos)}:${formatar(segundos)}`;
+      }
+    });
+  }
 
   // === Alternar seções ===
   window.alternarSecao = (id) => {
@@ -115,12 +142,12 @@
     secao.style.display = secao.style.display === 'block' ? 'none' : 'block';
   };
 
-  // === Mostrar/esconder painel ===
+  // === Mostrar painel ===
   document.getElementById('botaoPainel').onclick = () => {
     const painel = document.getElementById('painel');
     painel.style.display = painel.style.display === 'block' ? 'none' : 'block';
   };
-
 </script>
+
 </body>
 </html>
